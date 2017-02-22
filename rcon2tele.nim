@@ -43,7 +43,10 @@ proc readTelegram() {.async.} =
           }
           await ws.sock.sendText($cmd, true)
         else:
-          discard await bot.sendMessageAsync(tg_chat_id, "Permission denied")
+          try:
+            discard await bot.sendMessageAsync(tg_chat_id, "Permission denied")
+          except:
+            continue
 
 proc ping() {.async.} =
   while true:
