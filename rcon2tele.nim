@@ -1,4 +1,4 @@
-import os, asyncdispatch, strutils, websocket, telebot, cligen, parsecfg, json
+import os, asyncdispatch, strutils, websocket, telebot, cligen, parsecfg, json, daemonize
 
 var
   tg_operators: seq[string]
@@ -45,6 +45,11 @@ proc readTelegram() {.async.} =
         else:
           discard await bot.sendMessageAsync(tg_chat_id, "Permission denied")
 
+proc ping() {.async.} =
+  while true:
+    await sleepAsync(6000)
+    #echo "ping"
+    await ws.sock.sendPing(true)
 
 
 proc app(config = "config.ini") =
@@ -71,7 +76,12 @@ proc app(config = "config.ini") =
 
   asyncCheck readRcon()
   asyncCheck readTelegram()
+  asyncCheck ping()
   runForever()
 
 when isMainModule:
-  dispatch(app)
+  let
+    logfile = "/var/log/rcon2tele.log"
+    pidfile = "/var/run/rcon2tele.pid"
+  daemonize(pidfile, logfile, logfile, logfile, nil):
+    dispatch(app)

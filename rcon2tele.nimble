@@ -9,5 +9,6 @@ license       = "MIT"
 
 requires "nim >= 0.16.1"
 requires "telebot >= 0.1.5"
+requires "daemonize >= 0.0.3"
 requires "websocket"
 requires "cligen"
