@@ -9,9 +9,9 @@ var
   bot: TeleBot
 
 proc readRcon() {.async.} =
+  await ws.sock.sendText("{\"Identifier\":1021,\"Message\":\"serverinfo\",\"Name\":\"WebRcon\"}", true)
   while true:
     let read = await ws.sock.readData(true)
-    echo "read: " & $read
     if read.opcode == OpCode.Text:
       let
         data = parseJson(read.data)
@@ -28,16 +28,23 @@ proc readRcon() {.async.} =
 
 proc readTelegram() {.async.} =
   while true:
-    tg_updates = bot.getUpdates(timeout = 300)
+    try:
+      tg_updates = await bot.getUpdatesAsync(timeout = 300)
+    except:
+      continue
+
     for update in tg_updates:
-      if update.message.kind == kText and $update.message.fromUser.id in tg_operators:
-        let cmd = %*{
-          "Identifier": 10001,
-          "Message": update.message.text,
-          "Name": "WebRcon"
-        }
-        echo $cmd
-        await ws.sock.sendText($cmd, true)
+      if update.message.kind == kText:
+        if $update.message.fromUser.id in tg_operators:
+          let cmd = %*{
+            "Identifier": 10001,
+            "Message": update.message.text,
+            "Name": "rcon2tele"
+          }
+          await ws.sock.sendText($cmd, true)
+        else:
+          discard await bot.sendMessageAsync(tg_chat_id, "Permission denied")
+
 
 
 proc app(config = "config.ini") =
@@ -65,9 +72,6 @@ proc app(config = "config.ini") =
   asyncCheck readRcon()
   asyncCheck readTelegram()
   runForever()
-
-
-
 
 when isMainModule:
   dispatch(app)
