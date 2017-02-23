@@ -24,6 +24,10 @@ proc readRcon() {.async.} =
         let msg = getStr(data["Message"])
         if startsWith(msg, "[CHAT]"):
           continue
+        if startsWith(msg, "Saved "):
+          continue
+        if startsWith(msg, "Saving "):
+          continue
         discard await bot.sendMessageAsync(tg_chat_id, "```\n" & msg & "\n```", parseMode = "Markdown")
 
 proc readTelegram() {.async.} =
