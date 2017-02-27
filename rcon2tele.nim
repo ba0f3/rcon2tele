@@ -1,6 +1,7 @@
 import os, asyncdispatch, strutils, websocket, telebot, cligen, parsecfg, json, daemonize
 
 var
+  rcon_uri: string
   tg_operators: seq[string]
   tg_chat_id: int
   tg_updates: seq[Update]
@@ -9,17 +10,20 @@ var
   bot: TeleBot
 
 proc readRcon() {.async.} =
-  await ws.sock.sendText("{\"Identifier\":1021,\"Message\":\"serverinfo\",\"Name\":\"WebRcon\"}", true)
   while true:
+    if ws.sock.isClosed():
+      ws = await newAsyncWebsocket(rcon_uri)
+
     let read = await ws.sock.readData(true)
     if read.opcode == OpCode.Text:
       let
         data = parseJson(read.data)
-        typ = getStr(data["Type"])
+        kind = getStr(data["Kinde"])
 
-      if typ == "Chat":
-        let msg = parseJson(getStr(data["Message"]))
-        discard await bot.sendMessageAsync(tg_chat_id, "<" & getStr(msg["Username"]) & "> " & getStr(msg["Message"]))
+      var msg: string
+      if kind == "Chat":
+        let jobj = parseJson(getStr(data["Message"]))
+        msg = "<" & getStr(msg["Username"]) & "> " & getStr(msg["Message"]
       else:
         let msg = getStr(data["Message"])
         if startsWith(msg, "[CHAT]"):
@@ -28,7 +32,16 @@ proc readRcon() {.async.} =
           continue
         if startsWith(msg, "Saving "):
           continue
-        discard await bot.sendMessageAsync(tg_chat_id, "```\n" & msg & "\n```", parseMode = "Markdown")
+        msg = "```\n" & msg & "\n```", parseMode = "Markdown"
+
+      var i = 0
+      while i <= 5:
+        try:
+          discard await bot.sendMessageAsync(tg_chat_id, msg)
+          break
+        except:
+          await asyncSleep(10_000)
+        inc(i)
 
 proc readTelegram() {.async.} =
   while true:
@@ -45,7 +58,10 @@ proc readTelegram() {.async.} =
             "Message": update.message.text,
             "Name": "rcon2tele"
           }
-          await ws.sock.sendText($cmd, true)
+          if ws.sock.isClosed():
+            discard await bot.sendMessageAsync(tg_chat_id, "Websocket connection closed!")
+          else:
+            await ws.sock.sendText($cmd, true)
         else:
           try:
             discard await bot.sendMessageAsync(tg_chat_id, "Permission denied")
@@ -55,9 +71,8 @@ proc readTelegram() {.async.} =
 proc ping() {.async.} =
   while true:
     await sleepAsync(6000)
-    #echo "ping"
-    await ws.sock.sendPing(true)
-
+    if not ws.sock.isClosed():
+      await ws.sock.sendPing(true)
 
 proc app(config = "config.ini") =
   ## Websocket RCON to Telegram bridge
@@ -76,7 +91,9 @@ proc app(config = "config.ini") =
   tg_operators = split(strip(dict.getSectionValue("TELEGRAM","operators")), " ")
   tg_chat_id = parseInt(dict.getSectionValue("TELEGRAM", "chat_id"))
 
-  ws = waitFor newAsyncWebsocket(rcon_host, rcon_port, "/" & rcon_password, ssl = false)
+  rcon_uri = "ws://" & rcon_host & ":" & $rcon_port & "/" & rcon_password
+
+  ws = waitFor newAsyncWebsocket(rcon_uri)
   bot = newTeleBot(tg_token)
 
   echo "connected"
