@@ -1,4 +1,4 @@
-import os, asyncdispatch, strutils, websocket, telebot, cligen, parsecfg, json, daemonize
+import os, asyncdispatch, asyncnet, strutils, websocket, telebot, cligen, parsecfg, json, daemonize
 
 var
   rcon_uri: string
@@ -18,29 +18,30 @@ proc readRcon() {.async.} =
     if read.opcode == OpCode.Text:
       let
         data = parseJson(read.data)
-        kind = getStr(data["Kinde"])
+        kind = getStr(data["Type"])
 
       var msg: string
       if kind == "Chat":
         let jobj = parseJson(getStr(data["Message"]))
-        msg = "<" & getStr(msg["Username"]) & "> " & getStr(msg["Message"]
+        msg = "<" & getStr(jobj["Username"]) & "> " & getStr(jobj["Message"])
       else:
-        let msg = getStr(data["Message"])
+        msg = getStr(data["Message"])
         if startsWith(msg, "[CHAT]"):
           continue
         if startsWith(msg, "Saved "):
           continue
         if startsWith(msg, "Saving "):
           continue
-        msg = "```\n" & msg & "\n```", parseMode = "Markdown"
+        msg = "```\n" & msg & "\n```"
 
       var i = 0
       while i <= 5:
         try:
-          discard await bot.sendMessageAsync(tg_chat_id, msg)
+          discard await bot.sendMessageAsync(tg_chat_id, msg, parseMode = "Markdown")
           break
         except:
-          await asyncSleep(10_000)
+          discard
+        await sleepAsync(10_000)
         inc(i)
 
 proc readTelegram() {.async.} =
@@ -83,7 +84,7 @@ proc app(config = "config.ini") =
     dict = loadConfig(config)
 
     rcon_host = strip(dict.getSectionValue("RCON","host"))
-    rcon_port = Port parseInt(dict.getSectionValue("RCON","port"))
+    rcon_port = parseInt(dict.getSectionValue("RCON","port"))
     rcon_password = strip(dict.getSectionValue("RCON","password"))
 
     tg_token = strip(dict.getSectionValue("TELEGRAM","token"))
