@@ -10,17 +10,28 @@ var
   bot: TeleBot
 
 proc readRcon() {.async.} =
+  var
+    msg: string
+
   while true:
     if ws.sock.isClosed():
       ws = await newAsyncWebsocket(rcon_uri)
 
-    let read = await ws.sock.readData(true)
+    var read: tuple[opcode: Opcode, data: string]
+    try:
+      read = await ws.sock.readData(true)
+    except:
+      if getCurrentException() of IOError:
+        ws = waitFor newAsyncWebsocket(rcon_uri)
+        break
+      else:
+        echo "Got exception ", repr(getCurrentException()), " with message: ", getCurrentExceptionMsg()
+
     if read.opcode == OpCode.Text:
       let
         data = parseJson(read.data)
         kind = getStr(data["Type"])
 
-      var msg: string
       if kind == "Chat":
         let jobj = parseJson(getStr(data["Message"]))
         msg = "<" & getStr(jobj["Username"]) & "> " & getStr(jobj["Message"])
@@ -32,17 +43,8 @@ proc readRcon() {.async.} =
           continue
         if startsWith(msg, "Saving "):
           continue
-        msg = "```\n" & msg & "\n```"
-
-      var i = 0
-      while i <= 5:
-        try:
-          discard await bot.sendMessageAsync(tg_chat_id, msg, parseMode = "Markdown")
-          break
-        except:
-          discard
-        await sleepAsync(10_000)
-        inc(i)
+      msg = "```\n" & msg & "\n```"
+      discard await bot.sendMessageAsync(tg_chat_id, msg, parseMode = "Markdown", retry = 5)
 
 proc readTelegram() {.async.} =
   while true:
