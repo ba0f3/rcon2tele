@@ -1,4 +1,5 @@
-import os, asyncdispatch, asyncnet, strutils, websocket, telebot, cligen, parsecfg, json, daemonize
+#import os, asyncdispatch, asyncnet, strutils, websocket, telebot, cligen, parsecfg, json, daemonize
+import os, asyncdispatch, asyncnet, strutils, websocket, cligen, parsecfg, json, daemonize, ../telebot.nim/telebot
 
 var
   rcon_uri: string
