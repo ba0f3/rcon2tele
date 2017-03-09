@@ -1,5 +1,4 @@
-#import os, asyncdispatch, asyncnet, strutils, websocket, telebot, cligen, parsecfg, json, daemonize
-import os, asyncdispatch, asyncnet, strutils, websocket, cligen, parsecfg, json, daemonize, ../telebot.nim/telebot
+import os, asyncdispatch, asyncnet, strutils, websocket, telebot, cligen, parsecfg, json, daemonize
 
 var
   rcon_uri: string
@@ -23,6 +22,7 @@ proc readRcon() {.async.} =
       read = await ws.sock.readData(true)
     except:
       if getCurrentException() of IOError:
+        echo "WS connection closed, reconnecting.."
         ws = waitFor newAsyncWebsocket(rcon_uri)
         break
       else:
