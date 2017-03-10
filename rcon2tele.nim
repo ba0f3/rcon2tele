@@ -5,6 +5,7 @@ var
   tg_operators: seq[string]
   tg_chat_id: int
   tg_updates: seq[Update]
+  tg_queues: seq[string] = @[]
 
   ws: AsyncWebsocket
   bot: TeleBot
@@ -14,9 +15,6 @@ proc readRcon() {.async.} =
     msg: string
 
   while true:
-    if ws.sock.isClosed():
-      ws = await newAsyncWebsocket(rcon_uri)
-
     var read: tuple[opcode: Opcode, data: string]
     try:
       read = await ws.sock.readData(true)
@@ -24,7 +22,7 @@ proc readRcon() {.async.} =
       if getCurrentException() of IOError:
         echo "WS connection closed, reconnecting.."
         ws = waitFor newAsyncWebsocket(rcon_uri)
-        break
+        continue
       else:
         echo "Got exception ", repr(getCurrentException()), " with message: ", getCurrentExceptionMsg()
 
@@ -44,8 +42,7 @@ proc readRcon() {.async.} =
           continue
         if startsWith(msg, "Saving "):
           continue
-      msg = "```\n" & msg & "\n```"
-      discard await bot.sendMessageAsync(tg_chat_id, msg, parseMode = "Markdown", retry = 5)
+      tg_queues.add(msg)
 
 proc readTelegram() {.async.} =
   while true:
@@ -63,14 +60,45 @@ proc readTelegram() {.async.} =
             "Name": "rcon2tele"
           }
           if ws.sock.isClosed():
-            discard await bot.sendMessageAsync(tg_chat_id, "Websocket connection closed!")
+            tg_queues.add("Websocket connection closed!")
           else:
             await ws.sock.sendText($cmd, true)
         else:
           try:
-            discard await bot.sendMessageAsync(tg_chat_id, "Permission denied")
+            tg_queues.add("Permission denied")
           except:
             continue
+
+proc sendTelegram() {.async.} =
+  var
+    queue: string
+    message: string
+    length: int
+
+  while true:
+    message = ""
+    while len(tg_queues) > 0:
+      queue = tg_queues[0]
+      length = len(message)
+
+      if message == "" and len(queue) > 1000:
+        message = substr(queue, 0, 1000)
+        tg_queues[0] = substr(queue, 1000)
+        break
+
+      length += len(queue)
+      if length >= 1000:
+        break
+
+      message &= "\n" & queue
+      delete(tg_queues, 0)
+
+    if message != "":
+      try:
+        discard await bot.sendMessageAsync(tg_chat_id, "```\n" & message & "\n```", parseMode = "Markdown", retry = 5)
+      except:
+        discard
+    await sleepAsync(1000)
 
 proc ping() {.async.} =
   while true:
@@ -104,12 +132,13 @@ proc app(config = "config.ini") =
 
   asyncCheck readRcon()
   asyncCheck readTelegram()
+  asyncCheck sendTelegram()
   asyncCheck ping()
   runForever()
 
 when isMainModule:
   let
     logfile = "/var/log/rcon2tele.log"
-    pidfile = "/var/run/rcon2tele.pid"
+    pidfile = "/var/log/rcon2tele.pid"
   daemonize(pidfile, logfile, logfile, logfile, nil):
     dispatch(app)
