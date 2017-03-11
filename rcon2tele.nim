@@ -1,6 +1,7 @@
-import os, asyncdispatch, asyncnet, strutils, websocket, telebot, cligen, parsecfg, json, daemonize
+import os, asyncdispatch, asyncnet, strutils, websocket, telebot, cligen, parsecfg, json, daemonize, locks
 
 var
+  lock: Lock
   rcon_uri: string
   tg_operators: seq[string]
   tg_chat_id: int
@@ -77,21 +78,22 @@ proc sendTelegram() {.async.} =
 
   while true:
     message = ""
-    while len(tg_queues) > 0:
-      queue = tg_queues[0]
-      length = len(message)
+    withLock(lock):
+      while len(tg_queues) > 0:
+        queue = tg_queues[0]
+        length = len(message)
 
-      if message == "" and len(queue) > 1000:
-        message = substr(queue, 0, 1000)
-        tg_queues[0] = substr(queue, 1000)
-        break
+        if message == "" and len(queue) > 1000:
+          message = substr(queue, 0, 1000)
+          tg_queues[0] = substr(queue, 1000)
+          break
 
-      length += len(queue)
-      if length >= 1000:
-        break
+        length += len(queue)
+        if length >= 1000:
+          break
 
-      message &= "\n" & queue
-      delete(tg_queues, 0)
+        message &= "\n" & queue
+        delete(tg_queues, 0)
 
     if message != "":
       try:
@@ -129,6 +131,8 @@ proc app(config = "config.ini") =
   bot = newTeleBot(tg_token)
 
   echo "connected"
+
+  initLock(lock)
 
   asyncCheck readRcon()
   asyncCheck readTelegram()
