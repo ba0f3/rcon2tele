@@ -87,7 +87,7 @@ proc start*(t: Trivia) {.async.} =
         "Name": "trivia"
       }
       await t.ws.sock.sendText($cmd, true)
-    await sleepAsync(5_000)
+    await sleepAsync(10_000)
 
 proc stop*(t: Trivia) =
   t.isRunning = false

@@ -162,5 +162,5 @@ when isMainModule:
   let
     logfile = "/var/log/rcon2tele.log"
     pidfile = "/var/log/rcon2tele.pid"
-  #daemonize(pidfile, logfile, logfile, logfile, nil):
-  dispatch(app)
+  daemonize(pidfile, logfile, logfile, logfile, nil):
+    dispatch(app)
