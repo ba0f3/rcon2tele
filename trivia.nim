@@ -69,6 +69,13 @@ proc start*(t: Trivia) {.async.} =
     return
   t.isRunning = true
 
+  let cmd = %*{
+    "Identifier": 10000,
+    "Message": "say Trivia game will starts in 15s, you have 5s to anwser the questions.. Have fun!",
+    "Name": "trivia"
+  }
+  await t.ws.sock.sendText($cmd, true)
+  await sleepAsync(15_000)
   while t.isRunning:
     t.getNewQuestion()
     t.isAnswered = false
@@ -80,7 +87,7 @@ proc start*(t: Trivia) {.async.} =
         "Name": "trivia"
       }
       await t.ws.sock.sendText($cmd, true)
-    await sleepAsync(10_000)
+    await sleepAsync(5_000)
 
 proc stop*(t: Trivia) =
   t.isRunning = false
