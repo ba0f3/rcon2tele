@@ -10,6 +10,7 @@ var
 
   ws: AsyncWebsocket
   bot: TeleBot
+  game: Trivia
 
 proc readRcon() {.async.} =
   var
@@ -33,8 +34,12 @@ proc readRcon() {.async.} =
         kind = getStr(data["Type"])
 
       if kind == "Chat":
-        let jobj = parseJson(getStr(data["Message"]))
-        msg = "<" & getStr(jobj["Username"]) & "> " & getStr(jobj["Message"])
+        let
+          jobj = parseJson(getStr(data["Message"]))
+          chatMsg = getStr(jobj["Message"])
+        asyncCheck game.matchAnswer(chatMsg, getNum(jobj["UserId"]).int)
+
+        msg = "<" & getStr(jobj["Username"]) & "> " & chatMsg
       else:
         msg = getStr(data["Message"])
         if startsWith(msg, "[CHAT]"):
@@ -55,15 +60,21 @@ proc readTelegram() {.async.} =
     for update in tg_updates:
       if update.message.kind == kText:
         if $update.message.fromUser.id in tg_operators:
-          let cmd = %*{
-            "Identifier": 10001,
-            "Message": update.message.text,
-            "Name": "rcon2tele"
-          }
-          if ws.sock.isClosed():
-            tg_queues.add("Websocket connection closed!")
+          case update.message.text
+          of "trivia.start":
+            asyncCheck game.start()
+          of "trivia.stop":
+            game.stop()
           else:
-            await ws.sock.sendText($cmd, true)
+            let cmd = %*{
+              "Identifier": 10001,
+              "Message": update.message.text,
+              "Name": "rcon2tele"
+            }
+            if ws.sock.isClosed():
+              tg_queues.add("Websocket connection closed!")
+            else:
+              await ws.sock.sendText($cmd, true)
         else:
           try:
             tg_queues.add("Permission denied")
@@ -125,6 +136,11 @@ proc app(config = "config.ini") =
 
     tg_token = strip(dict.getSectionValue("TELEGRAM","token"))
 
+    trivia_data_dir = strip(dict.getSectionValue("TRIVIA","data_dir"))
+    trivia_reward_item = strip(dict.getSectionValue("TRIVIA","reward_item"))
+    trivia_reward_num = parseInt(dict.getSectionValue("TRIVIA","reward_num"))
+
+
   tg_operators = split(strip(dict.getSectionValue("TELEGRAM","operators")), " ")
   tg_chat_id = parseInt(dict.getSectionValue("TELEGRAM", "chat_id"))
 
@@ -132,8 +148,9 @@ proc app(config = "config.ini") =
 
   ws = waitFor newAsyncWebsocket(rcon_uri)
   bot = newTeleBot(tg_token)
-
   echo "connected"
+
+  game = newTrivia(trivia_data_dir, trivia_reward_item, trivia_reward_num, ws)
 
   asyncCheck readRcon()
   asyncCheck readTelegram()
@@ -145,5 +162,5 @@ when isMainModule:
   let
     logfile = "/var/log/rcon2tele.log"
     pidfile = "/var/log/rcon2tele.pid"
-  daemonize(pidfile, logfile, logfile, logfile, nil):
-    dispatch(app)
+  #daemonize(pidfile, logfile, logfile, logfile, nil):
+  dispatch(app)
