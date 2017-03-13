@@ -51,6 +51,9 @@ proc getNewQuestion*(t: Trivia) =
   file.setFilePos(0)
   for line in file.lines:
     if count == rand:
+      if isNilOrEmpty(line):
+        t.getNewQuestion()
+
       question = line
       break
     inc(count)
