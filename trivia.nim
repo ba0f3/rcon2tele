@@ -71,7 +71,7 @@ proc start*(t: Trivia) {.async.} =
 
   let cmd = %*{
     "Identifier": 10000,
-    "Message": "say Trivia game will starts in 15s, you have 5s to anwser the questions.. Have fun!",
+    "Message": "say <color=yellow>Trivia game will starts in 15s, you have 10s to anwser the questions.. Have fun!</color>",
     "Name": "trivia"
   }
   await t.ws.sock.sendText($cmd, true)
