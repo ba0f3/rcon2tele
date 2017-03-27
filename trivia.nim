@@ -71,7 +71,7 @@ proc start*(t: Trivia) {.async.} =
 
   let cmd = %*{
     "Identifier": 10000,
-    "Message": "say <color=yellow>Trivia game will starts in 15s, you have 10s to anwser the questions.. Have fun!</color>",
+    "Message": "say <color=yellow>Trivia game will starts in 15s, you have 20s to anwser the questions.. Have fun!</color>",
     "Name": "trivia"
   }
   await t.ws.sock.sendText($cmd, true)
@@ -87,7 +87,7 @@ proc start*(t: Trivia) {.async.} =
         "Name": "trivia"
       }
       await t.ws.sock.sendText($cmd, true)
-    await sleepAsync(10_000)
+    await sleepAsync(20_000)
 
 proc stop*(t: Trivia) =
   t.isRunning = false
@@ -99,7 +99,6 @@ proc matchAnswer*(t: Trivia, answer: string, userId: int) {.async.} =
     return
 
   if t.answer == toLower(strip(answer)):
-    echo "correct"
     t.isAnswered = true
     let cmd = %*{
       "Identifier": 10000,

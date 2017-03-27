@@ -1,5 +1,10 @@
 import os, asyncdispatch, asyncnet, strutils, websocket, telebot, cligen, parsecfg, json, daemonize, trivia
 
+
+const
+  TRIVIA = 10_000
+  SERVER_INFO = 100
+
 var
   isSending = false
   rcon_uri: string
@@ -48,9 +53,17 @@ proc readRcon() {.async.} =
           continue
         if startsWith(msg, "Saving "):
           continue
-      tg_queues.add(msg)
+
+        let identifier = getNum(data["Identifier"])
+        case identifier
+        of SERVER_INFO:
+
+
+
+tg_queues.add(msg)
 
 proc readTelegram() {.async.} =
+
   while true:
     try:
       tg_updates = await bot.getUpdatesAsync(timeout = 300)
@@ -66,6 +79,12 @@ proc readTelegram() {.async.} =
           of "trivia.stop":
             game.stop()
           else:
+            var identifier: int
+            if toLower(update.message.text[0..3]) == "say":
+              identifier = 10_010
+            else:
+              identifier = 10_001
+
             let cmd = %*{
               "Identifier": 10001,
               "Message": update.message.text,
@@ -109,12 +128,12 @@ proc sendTelegram() {.async.} =
 
       if message != "":
         try:
-          discard await bot.sendMessageAsync(tg_chat_id, "```\n" & message & "\n```", parseMode = "Markdown", retry = 5)
+          discard await bot.sendMessageAsync(tg_chat_id, "```\n" & message & "\n```", parseMode = "Markdown", retry = 2)
         except:
           discard
       isSending = false
 
-    await sleepAsync(1000)
+    await sleepAsync(1_000)
 
 proc ping() {.async.} =
   while true:
