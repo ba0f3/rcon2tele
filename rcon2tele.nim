@@ -83,6 +83,7 @@ proc readTelegram() {.async.} =
           text = response.text.get
 
         if $user.id in tg_operators:
+          echo "Command: " & text
           case text
           of "trivia.start":
             asyncCheck game.start()
@@ -99,10 +100,7 @@ proc readTelegram() {.async.} =
             else:
               await ws.sock.sendText($cmd, true)
         else:
-          try:
-            tg_queues.add("Permission denied")
-          except:
-            continue
+          tg_queues.add("Permission denied")
 
 proc sendTelegram() {.async.} =
   var

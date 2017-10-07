@@ -81,6 +81,7 @@ proc start*(t: Trivia) {.async.} =
   if t.isRunning:
     echo "The game is already running"
     return
+  echo "Trivia game is starting"
   t.isRunning = true
 
   let cmd = %*{
@@ -104,6 +105,7 @@ proc start*(t: Trivia) {.async.} =
 
 proc stop*(t: Trivia) =
   t.isRunning = false
+  echo "Trivia game is stopped"
 
 proc matchAnswer*(t: Trivia, answer: string, userId: int) {.async.} =
   if not t.isRunning:
