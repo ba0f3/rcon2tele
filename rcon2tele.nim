@@ -1,4 +1,9 @@
-import os, asyncdispatch, asyncnet, strutils, websocket, telebot, cligen, parsecfg, json, daemonize
+import os, asyncdispatch, asyncnet, strutils, websocket, telebot, cligen, parsecfg, json, daemonize, trivia
+
+
+const
+  TRIVIA = 10_000
+  SERVER_INFO = 100
 
 var
   isSending = false
@@ -10,6 +15,7 @@ var
 
   ws: AsyncWebsocket
   bot: TeleBot
+  game: Trivia
 
 proc connectRcon() =
   while true:
@@ -43,8 +49,12 @@ proc readRcon() {.async.} =
         kind = getStr(data["Type"])
 
       if kind == "Chat":
-        let jobj = parseJson(getStr(data["Message"]))
-        msg = "<" & getStr(jobj["Username"]) & "> " & getStr(jobj["Message"])
+        let
+          jobj = parseJson(getStr(data["Message"]))
+          chatMsg = getStr(jobj["Message"])
+        asyncCheck game.matchAnswer(chatMsg, getNum(jobj["UserId"]).int)
+
+        msg = "<" & getStr(jobj["Username"]) & "> " & chatMsg
       else:
         msg = getStr(data["Message"])
         if startsWith(msg, "[CHAT]"):
@@ -56,6 +66,7 @@ proc readRcon() {.async.} =
       tg_queues.add(msg)
 
 proc readTelegram() {.async.} =
+
   while true:
     try:
       tg_updates = await bot.getUpdates(timeout = 300)
@@ -63,7 +74,6 @@ proc readTelegram() {.async.} =
       continue
 
     for update in tg_updates:
-
       if update.message.isSome:
         var response = update.message.get
         if response.text.isNone:
@@ -73,15 +83,21 @@ proc readTelegram() {.async.} =
           text = response.text.get
 
         if $user.id in tg_operators:
-          let cmd = %*{
-            "Identifier": 10001,
-            "Message": text,
-            "Name": "rcon2tele"
-          }
-          if ws.sock.isClosed():
-            tg_queues.add("Websocket connection closed!")
+          case text
+          of "trivia.start":
+            asyncCheck game.start()
+          of "trivia.stop":
+            game.stop()
           else:
-            await ws.sock.sendText($cmd, true)
+            let cmd = %*{
+              "Identifier": 10001,
+              "Message": text,
+              "Name": "rcon2tele"
+            }
+            if ws.sock.isClosed():
+              tg_queues.add("Websocket connection closed!")
+            else:
+              await ws.sock.sendText($cmd, true)
         else:
           try:
             tg_queues.add("Permission denied")
@@ -124,7 +140,7 @@ proc sendTelegram() {.async.} =
           discard
       isSending = false
 
-    await sleepAsync(1000)
+    await sleepAsync(1_000)
 
 proc ping() {.async.} =
   while true:
@@ -146,6 +162,10 @@ proc app(config = "config.ini") =
 
     tg_token = strip(dict.getSectionValue("TELEGRAM","token"))
 
+    trivia_data_dir = strip(dict.getSectionValue("TRIVIA","data_dir"))
+    trivia_rewards_file = strip(dict.getSectionValue("TRIVIA","rewards_file"))
+
+
   tg_operators = split(strip(dict.getSectionValue("TELEGRAM","operators")), " ")
   tg_chat_id = parseInt(dict.getSectionValue("TELEGRAM", "chat_id"))
 
@@ -154,7 +174,7 @@ proc app(config = "config.ini") =
   connectRcon()
   bot = newTeleBot(tg_token)
 
-  echo "connected"
+  game = newTrivia(trivia_data_dir, trivia_rewards_file, ws)
 
   asyncCheck readRcon()
   asyncCheck readTelegram()
@@ -162,9 +182,15 @@ proc app(config = "config.ini") =
   asyncCheck ping()
   runForever()
 
-when isMainModule:
+proc main(config="config.ini", daemonized=false) =
   let
     logfile = "/var/log/rcon2tele.log"
     pidfile = "/var/log/rcon2tele.pid"
-  daemonize(pidfile, logfile, logfile, logfile, nil):
-    dispatch(app)
+  if daemonized:
+    daemonize(pidfile, logfile, logfile, logfile, nil):
+      app(config)
+  else:
+    app(config)
+
+when isMainModule:
+  dispatch(main)

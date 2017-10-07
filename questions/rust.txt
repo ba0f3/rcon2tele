@@ -1,0 +1,41 @@
+How many calories does a raw pork give?`60
+How many calories does a cooked pork give?`110
+How many calories does a burned pork give?`10
+
+How many C4 to break a wooden wall?`1|one
+How many C4 to break a stone wall?`2|two
+How many C4 to break a sheet metal wall?`2|two
+How many C4 to break an armored wall?`3|three
+How many C4 to break a wooden door?`1|one
+How many C4 to break a sheet metal door?`1|one
+How many C4 to break an armored door?`2|two
+How many C4 to break a ladder hatch?`1|one
+How many C4 to break a high external wooden wall?`2|two
+How many C4 to break a high external stone wall?`2|two
+
+How many rockets to break a wooden wall?`2|two
+How many rockets to break a stone wall?`4|four
+How many rockets to break a sheet metal wall?`4|four
+How many rockets to break an armored wall?`6|six
+How many rockets to break a wooden door?`1|one
+How many rockets to break a sheet metal door?`2|two
+How many rockets to break an armored door?`4|four
+How many rockets to break a ladder hatch?`2|two
+How many rockets to break a high external wooden wall?`3|three
+How many rockets to break a high external stone wall?`4|four
+
+How many mod slots does M249 have?`3|three
+How many mod slots does AK have?`3|three
+How many mod slots does LR-300 have?`3|three
+How many mod slots does MP3 have?`3|three
+How many mod slots does thompson have?`2|two
+
+How many HQM required for a 4x Zoom Scope`50
+How many HQM required for a silencer`5|five
+How many HQM required for a lasersight`3|three
+How many tech trashes required for a lasersight`1|one
+How many HQM required for a flashlight`3|three
+How many HQM required for a holosight`12
+How many tech trashes required for a holosight`1|one
+How many HQM required for a muzzle boost`10|ten
+How many HQM required for a muzzle brake`8|eight
