@@ -11,6 +11,16 @@ var
   ws: AsyncWebsocket
   bot: TeleBot
 
+proc connectRcon() =
+  while true:
+    try:
+      ws = waitFor newAsyncWebsocket(rcon_uri)
+      break
+    except:
+      waitFor sleepAsync(5000)
+
+  echo "Connected to WS server"
+
 proc readRcon() {.async.} =
   var
     msg: string
@@ -22,6 +32,7 @@ proc readRcon() {.async.} =
     except:
       if getCurrentException() of IOError:
         echo "WS connection closed, reconnecting.."
+        connectRcon()
         ws = waitFor newAsyncWebsocket(rcon_uri)
         continue
       else:
@@ -48,16 +59,24 @@ proc readRcon() {.async.} =
 proc readTelegram() {.async.} =
   while true:
     try:
-      tg_updates = await bot.getUpdatesAsync(timeout = 300)
+      tg_updates = await bot.getUpdates(timeout = 300)
     except:
       continue
 
     for update in tg_updates:
-      if update.message.kind == kText:
-        if $update.message.fromUser.id in tg_operators:
+
+      if update.message.isSome:
+        var response = update.message.get
+        if response.text.isNone:
+          continue
+        let
+          user = response.fromUser.get
+          text = response.text.get
+
+        if $user.id in tg_operators:
           let cmd = %*{
             "Identifier": 10001,
-            "Message": update.message.text,
+            "Message": text,
             "Name": "rcon2tele"
           }
           if ws.sock.isClosed():
@@ -98,7 +117,10 @@ proc sendTelegram() {.async.} =
 
       if message != "":
         try:
-          discard await bot.sendMessageAsync(tg_chat_id, "```\n" & message & "\n```", parseMode = "Markdown", retry = 5)
+          var message = newMessage(tg_chat_id, message)
+          message.disableNotification = true
+          message.parseMode = "markdown"
+          discard await bot.send(message)
         except:
           discard
       isSending = false
@@ -130,7 +152,7 @@ proc app(config = "config.ini") =
 
   rcon_uri = "ws://" & rcon_host & ":" & $rcon_port & "/" & rcon_password
 
-  ws = waitFor newAsyncWebsocket(rcon_uri)
+  connectRcon()
   bot = newTeleBot(tg_token)
 
   echo "connected"
