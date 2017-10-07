@@ -33,7 +33,6 @@ proc readRcon() {.async.} =
       if getCurrentException() of IOError:
         echo "WS connection closed, reconnecting.."
         connectRcon()
-        ws = waitFor newAsyncWebsocket(rcon_uri)
         continue
       else:
         echo "Got exception ", repr(getCurrentException()), " with message: ", getCurrentExceptionMsg()
