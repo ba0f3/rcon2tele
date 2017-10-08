@@ -27,7 +27,7 @@ How many rockets to break a high external stone wall?`4|four
 How many mod slots does M249 have?`3|three
 How many mod slots does AK have?`3|three
 How many mod slots does LR-300 have?`3|three
-How many mod slots does MP3 have?`3|three
+How many mod slots does MP5 have?`3|three
 How many mod slots does thompson have?`2|two
 
 How many HQM required for a 4x Zoom Scope`50
@@ -39,3 +39,24 @@ How many HQM required for a holosight`12
 How many tech trashes required for a holosight`1|one
 How many HQM required for a muzzle boost`10|ten
 How many HQM required for a muzzle brake`8|eight
+
+How many wood needed for a square foundation?`50
+How many wood needed for a triangle foundation?`25
+How many wood needed for a step foundation?`25
+How many wood needed for a square floor?`25
+How many wood needed for a triangle floor?`13
+How many wood needed for a wall?`50
+How many wood needed for a low wall?`25
+How many wood needed for a doorway?`35
+How many wood needed for a window?`35
+How many wood needed for a wall frame?`25
+How many wood needed for a floor frame?`25
+How many wood needed for a stair way?`50
+How many wood needed for a pillar?`20
+How many wood needed for a roof?`50
+
+Can you put a floor on top of a pillar without a wall?`no
+
+How to use talk to other players nearby?`v
+How to open map?`g
+What command to execute yourself?`kill
