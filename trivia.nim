@@ -1,4 +1,5 @@
 import os, random, asyncdispatch, asyncnet, strutils, websocket, json
+import telebot
 
 randomize()
 
@@ -17,7 +18,7 @@ type
     rewardCount: int
 
 proc loadQuestions*(t: Trivia) =
-  var file: File
+  var file: system.File
   t.questions = @[]
   for kind, path in walkDir(t.questionDir):
     file = open(path)
@@ -143,3 +144,21 @@ proc matchAnswer*(t: Trivia, answer: string, userId: int) {.async.} =
       "Name": "trivia"
     }
     await t.ws.sock.sendText($cmd, true)
+
+
+proc onCommandStart*(t: Trivia): CommandCallback =
+  proc cb(e: Command) {.async.} =
+    asyncCheck t.start()
+  result = cb
+
+proc onCommandStop*(t: Trivia): CommandCallback =
+  proc cb(e: Command) {.async.} =
+    t.stop()
+  result = cb
+
+proc register*(t: Trivia, b: TeleBot) =
+  let
+    startHandler = onCommandStart(t)
+    stopHandler = onCommandStop(t)
+  b.onCommand("trivia.start", startHandler)
+  b.onCommand("trivia.stop", stopHandler)

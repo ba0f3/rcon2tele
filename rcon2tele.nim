@@ -1,5 +1,5 @@
-import os, asyncdispatch, asyncnet, strutils, websocket, telebot, cligen, parsecfg, json, daemonize, trivia
-
+import os, asyncdispatch, asyncnet, strutils, websocket, cligen, parsecfg, json, daemonize, trivia, options
+import telebot
 
 const
   TRIVIA = 10_000
@@ -10,7 +10,6 @@ var
   rcon_uri: string
   tg_operators: seq[string]
   tg_chat_id: int
-  tg_updates: seq[Update]
   tg_queues: seq[string] = @[]
 
   ws: AsyncWebsocket
@@ -65,42 +64,35 @@ proc readRcon() {.async.} =
           continue
       tg_queues.add(msg)
 
-proc readTelegram() {.async.} =
-
-  while true:
-    try:
-      tg_updates = await bot.getUpdates(timeout = 300)
-    except:
-      continue
-
-    for update in tg_updates:
-      if update.message.isSome:
-        var response = update.message.get
-        if response.text.isNone:
-          continue
+proc updateHandler(bot: TeleBot, ws: AsyncWebSocket, operators: seq[string], queues: ptr seq[string]): UpdateCallback =
+  proc cb(e: Update) {.async.} =
+    if e.message.isSome:
+      var response = e.message.get
+      if response.text.isSome:
         let
           user = response.fromUser.get
           text = response.text.get
 
-        if $user.id in tg_operators:
+        if $user.id in operators:
           echo "Command: " & text
-          case text
-          of "trivia.start":
-            asyncCheck game.start()
-          of "trivia.stop":
-            game.stop()
+          let cmd = %*{
+            "Identifier": 10001,
+            "Message": text,
+            "Name": "rcon2tele"
+          }
+          if ws.sock.isClosed():
+            queues[].add("Websocket connection closed!")
           else:
-            let cmd = %*{
-              "Identifier": 10001,
-              "Message": text,
-              "Name": "rcon2tele"
-            }
-            if ws.sock.isClosed():
-              tg_queues.add("Websocket connection closed!")
-            else:
-              await ws.sock.sendText($cmd, true)
+            await ws.sock.sendText($cmd, true)
         else:
-          tg_queues.add("Permission denied")
+          queues[].add("Permission denied")
+
+  result = cb
+
+proc readTelegram() {.async.} =
+  let handler = updateHandler(bot, ws, tg_operators, addr tg_queues)
+  bot.onUpdate(handler)
+  discard bot.poll(300)
 
 proc sendTelegram() {.async.} =
   var
@@ -171,12 +163,12 @@ proc app(config = "config.ini") =
 
   connectRcon()
   bot = newTeleBot(tg_token)
-
   game = newTrivia(trivia_data_dir, trivia_rewards_file, ws)
+  game.register(bot)
 
   asyncCheck readRcon()
-  asyncCheck readTelegram()
   asyncCheck sendTelegram()
+  asyncCheck readTelegram()
   asyncCheck ping()
   runForever()
 
