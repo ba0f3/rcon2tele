@@ -122,7 +122,7 @@ proc sendTelegram() {.async.} =
 
       if message != "":
         try:
-          var message = newMessage(tg_chat_id, "<pre>" & message "</pre>")
+          var message = newMessage(tg_chat_id, "<pre>" & message & "</pre>")
           message.disableNotification = true
           message.parseMode = "html"
           discard await bot.send(message)
