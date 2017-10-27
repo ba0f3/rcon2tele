@@ -73,10 +73,8 @@ proc updateHandler(bot: TeleBot, ws: AsyncWebSocket, operators: seq[string], que
           user = response.fromUser.get
           text = response.text.get
 
-        echo $user.id
-        if $user.id in operators:
+        if text[0] == '!' and $user.id in operators:
           echo "Command: " & text
-          if text[0] == '!'
           let cmd = %*{
             "Identifier": 10001,
             "Message": text[1..<text.len],
