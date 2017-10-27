@@ -53,7 +53,7 @@ proc readRcon() {.async.} =
           chatMsg = getStr(jobj["Message"])
         asyncCheck game.matchAnswer(chatMsg, getNum(jobj["UserId"]).int)
 
-        msg = "<" & getStr(jobj["Username"]) & "> " & chatMsg
+        msg = "&lt;" & getStr(jobj["Username"]) & "&gt; " & chatMsg
       else:
         msg = getStr(data["Message"])
         if startsWith(msg, "[CHAT]"):
@@ -117,12 +117,12 @@ proc sendTelegram() {.async.} =
         if length >= 1000:
           break
 
-        message &= "<br>" & queue
+        message &= "\n" & queue
         delete(tg_queues, 0)
 
       if message != "":
         try:
-          var message = newMessage(tg_chat_id, message)
+          var message = newMessage(tg_chat_id, "<pre>" & message "</pre>")
           message.disableNotification = true
           message.parseMode = "html"
           discard await bot.send(message)
