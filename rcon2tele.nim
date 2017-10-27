@@ -117,14 +117,14 @@ proc sendTelegram() {.async.} =
         if length >= 1000:
           break
 
-        message &= "\n" & queue
+        message &= "<br>" & queue
         delete(tg_queues, 0)
 
       if message != "":
         try:
           var message = newMessage(tg_chat_id, message)
           message.disableNotification = true
-          message.parseMode = "markdown"
+          message.parseMode = "html"
           discard await bot.send(message)
         except:
           discard
