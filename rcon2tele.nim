@@ -53,7 +53,7 @@ proc readRcon() {.async.} =
           chatMsg = getStr(jobj["Message"])
         asyncCheck game.matchAnswer(chatMsg, getNum(jobj["UserId"]).int)
 
-        msg = "&lt;" & getStr(jobj["Username"]) & "&gt; " & chatMsg
+        msg = "<" & getStr(jobj["Username"]) & "> " & chatMsg
       else:
         msg = getStr(data["Message"])
         if startsWith(msg, "[CHAT]"):
@@ -73,11 +73,13 @@ proc updateHandler(bot: TeleBot, ws: AsyncWebSocket, operators: seq[string], que
           user = response.fromUser.get
           text = response.text.get
 
+        echo $user.id
         if $user.id in operators:
           echo "Command: " & text
+          if text[0] == '!'
           let cmd = %*{
             "Identifier": 10001,
-            "Message": text,
+            "Message": text[1..<text.len],
             "Name": "rcon2tele"
           }
           if ws.sock.isClosed():
