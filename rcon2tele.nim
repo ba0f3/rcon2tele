@@ -73,20 +73,25 @@ proc updateHandler(bot: TeleBot, ws: AsyncWebSocket, operators: seq[string], que
           user = response.fromUser.get
           text = response.text.get
 
-        if text[0] == '!' and $user.id in operators:
-          echo "Command: " & text
-          let cmd = %*{
-            "Identifier": 10001,
-            "Message": text[1..<text.len],
-            "Name": "rcon2tele"
-          }
-          if ws.sock.isClosed():
-            queues[].add("Websocket connection closed!")
+        if text[0] == '!':
+          if $user.id in operators:
+            echo "Command: " & text
+            let cmd = %*{
+              "Identifier": 10001,
+              "Message": text[1..<text.len],
+              "Name": "rcon2tele"
+            }
+            if ws.sock.isClosed():
+              queues[].add("Websocket connection closed!")
+            else:
+              await ws.sock.sendText($cmd, true)
           else:
-            await ws.sock.sendText($cmd, true)
-        else:
-          queues[].add("Permission denied")
+            queues[].add("Permission denied")
+  result = cb
 
+proc commandHandler(bot: TeleBot, game: Trivia): CommandCallback =
+  proc cb(e: Command) {.async.} =
+    echo e
   result = cb
 
 proc readTelegram() {.async.} =
@@ -163,7 +168,8 @@ proc app(config = "config.ini") =
   connectRcon()
   bot = newTeleBot(tg_token)
   game = newTrivia(trivia_data_dir, trivia_rewards_file, ws)
-  game.register(bot)
+  bot.onCommand("trivia", onTriviaCommand(game))
+  bot.onCommand("test", commandHandler(bot, game))
 
   asyncCheck readRcon()
   asyncCheck sendTelegram()

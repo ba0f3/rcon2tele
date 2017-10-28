@@ -145,20 +145,10 @@ proc matchAnswer*(t: Trivia, answer: string, userId: int) {.async.} =
     }
     await t.ws.sock.sendText($cmd, true)
 
-
-proc onCommandStart*(t: Trivia): CommandCallback =
+proc onTriviaCommand*(t: Trivia): CommandCallback =
   proc cb(e: Command) {.async.} =
-    asyncCheck t.start()
+    if e.params.startsWith("start"):
+      asyncCheck t.start()
+    elif e.params.startsWith("stop"):
+      t.stop
   result = cb
-
-proc onCommandStop*(t: Trivia): CommandCallback =
-  proc cb(e: Command) {.async.} =
-    t.stop()
-  result = cb
-
-proc register*(t: Trivia, b: TeleBot) =
-  let
-    startHandler = onCommandStart(t)
-    stopHandler = onCommandStop(t)
-  b.onCommand("trivia.start", startHandler)
-  b.onCommand("trivia.stop", stopHandler)
